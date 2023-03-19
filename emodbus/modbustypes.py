@@ -5,6 +5,7 @@ from inspect import currentframe, getframeinfo
 from mandrake import AllMethods
 from .constants import *
 
+
 class ModbusTypeInteface(AllMethods):
     defaultByteOrder = ByteOrder.BIG_ENDIAN
     # def __new__(cls):
@@ -18,8 +19,8 @@ class ModbusTypeInteface(AllMethods):
 
         self._start_init()
         self._range = args.get('_range', [1, 1])
-        self._dec = args.get('_dec', None)
-        self._structFormat = None
+        self._dec = args.get('_dec', 1)
+        self._structFormat = ''
         self._charFormat = args.get('_charFormat', 's')
 
         self.encoding = args.get('encoding', ENCODE_ASCII)
@@ -38,8 +39,41 @@ class ModbusTypeInteface(AllMethods):
     # def __del__(self):
         # print("__del__ Destructor magic method is called")
 
+    def __str__(self) -> str:
+        v = self.call_func()
+        if type(self.format) == str and self.format != '':
+            return self.format.format(v)
+        return f'{v}'
+
+    def call_func(self):
+        v = self.value
+        fn = self.callbBackFunction
+        if fn is None or fn == '':
+            return v
+        t = type(fn)
+        fnName = fn
+        if t == str:
+            fn = locals().get(fn, globals().get(fn))
+        elif t in [list, tuple]:
+            l = len(fn)
+            if l <= 1:
+                if l == 1:
+                    fn = None
+                else:
+                    fn = getattr(fn[0], fn[1])
+        if fn is None:
+            print('Error: Function not available', fnName)
+            return v
+        if callable(fn):
+            return fn(self)
+        print('Error: Function not callable', fnName)
+        return v
+
 
 class Any(ABC, ModbusTypeInteface):
+    def show(self):
+        return self.__str__()
+
     def _set_raw(self, value: bytes):
         if value is None:
             return
@@ -206,8 +240,8 @@ class Dec(Short):
         if value is None:
             return
         super()._set_raw(value)
-        v=self.__dict__['value']/self._dec
-        self.__dict__['value'] =v
+        v = self.__dict__['value']/self._dec
+        self.__dict__['value'] = v
 
     def _set_value(self, value):
         super()._set_value(value*self._dec)

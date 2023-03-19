@@ -105,8 +105,10 @@ class ConnTCP(Conn):
             fn = dictFnCode[o.fnCode]
 
             result = fn(address=o.addr, count=o.obj.len, slave=slave)
-            o.obj.raw = [result.getRegister(seq)
-                         for seq in range(o.obj.len)]
+            o.obj.raw = [
+                result.getRegister(seq)
+                for seq in range(o.obj.len)
+            ]
             out[name] = o.obj
 
         # cli.close_port_after_each_call = True
@@ -234,11 +236,11 @@ class InitModBusType:
         if type(className) in [list, tuple]:
             c = className[0]
             p = className[1] if len(className) > 1 else {}
-            if type(p)!=dict:
+            if type(p) != dict or p is None:
                 p = {}
         else:
             c = className
             p = {}
-        if type(c) == str and c!='':
-            return getattr(mbt, str(c))(p)
-        return mbt.Short(p)
+        if c == '':
+            c = 'Short'
+        return getattr(mbt, str(c))(p)
