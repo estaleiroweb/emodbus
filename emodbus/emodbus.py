@@ -10,7 +10,7 @@ class Conn(ABC):
     __defSlave = {}
 
     @abstractmethod
-    def __init__(self, ) -> None:
+    def __init__(self) -> None:
         self.__slaves = {}
 
     def __call__(self):
@@ -42,19 +42,24 @@ class Conn(ABC):
         """
         ...
 
-    def slave(self, slave: int, mib: dict = None) -> 'dict|None':
-        if mib is None:
+    def slave(self, slave: int, mib: dict = {}) -> 'Addr':
+        if mib is None or len(mib) == 0:
             return Addr(self.__slaves.get(slave, Conn.__defSlave.get(slave)))
         self.__slaves[slave] = Addr(mib)
+        return self.__slaves[slave]
 
-    def defSlave(slave: int, mib: dict = None) -> 'dict|None':
-        if mib is None:
-            return Addr(Conn.__defSlave.get(slave))
+    @staticmethod
+    def defSlave(slave: int, mib: dict = {}) -> 'Addr':
+        if mib is None or len(mib) == 0:
+            if slave in Conn.__defSlave.keys():
+                return Conn.__defSlave[slave]
+            return Addr()
         Conn.__defSlave[slave] = Addr(mib)
+        return Conn.__defSlave[slave]
 
     def _readMib(self, slave: int, address: list) -> 'tuple[Addr,list,list]':
         mib = self.slave(slave)
-        keys = mib().keys()
+        keys = list(mib().keys())
         if address is None or len(address) == 0:
             address = list(mib.value.keys())
         return (mib, keys, address)
@@ -89,7 +94,7 @@ class ConnTCP(Conn):
             # 20: cli.read_file_record,
             # 24: cli.read_fifo_queue,
         }
-        cli.clear_buffers_before_each_transaction = True
+        # cli.clear_buffers_before_each_transaction = True
         cli.connect()
 
         out = {}
@@ -104,13 +109,14 @@ class ConnTCP(Conn):
                          for seq in range(o.obj.len)]
             out[name] = o.obj
 
-        cli.close_port_after_each_call = True
+        # cli.close_port_after_each_call = True
         cli.close()
 
         return out
 
     def write(self, slave: int = 0, address: dict = {}) -> dict:
         mib = self.slave(slave)
+        return {}
 
 
 class ConnRTU(Conn):
@@ -173,6 +179,7 @@ class ConnRTU(Conn):
 
     def write(self, slave: int = 0, address: dict = {}) -> dict:
         mib = self.slave(slave)
+        return {}
 
 
 class ConnASCII(ConnRTU):
@@ -184,11 +191,10 @@ class ConnASCII(ConnRTU):
 class Addr:
     def __init__(self, value: 'Addr|dict' = {}) -> None:
         self._count = 0
-        self.value = {}
-        t = type(value)
-        if t == Addr:
+        if isinstance(value, Addr):
             self.value = value.value
         else:
+            self.value = {}
             t = type(value)
             v = {} if value is None or t != dict else value
             for i in v:
@@ -197,7 +203,7 @@ class Addr:
     def __call__(self) -> dict:
         return self.value
 
-    def add(self, name: str = None, addr: int = 0, fnCode: int = 4, callbackFunction: 'str|tuple|list' = None):
+    def add(self, name: str, addr: int = 0, fnCode: int = 4, callbackFunction: 'str|tuple|list' = ''):
         if name is None:
             n = self._count
             self._count += 1
@@ -225,13 +231,14 @@ class InitModBusType:
     def paser(self, className: 'str|list|tuple|mbt.ModbusTypeInteface') -> 'mbt.ModbusTypeInteface':
         if isinstance(className, mbt.ModbusTypeInteface):
             return className
-        t = type(className)
-        if t == list or t == tuple:
+        if type(className) in [list, tuple]:
             c = className[0]
-            p = dict(className[1])
+            p = className[1] if len(className) > 1 else {}
+            if type(p)!=dict:
+                p = {}
         else:
             c = className
             p = {}
-        if c is None or type(c) != str and c == '':
-            return mbt.Short(p)
-        return getattr(mbt, c)(p)
+        if type(c) == str and c!='':
+            return getattr(mbt, str(c))(p)
+        return mbt.Short(p)
