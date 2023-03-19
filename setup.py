@@ -4,6 +4,8 @@ import os
 import shutil
 from setuptools import setup, find_packages
 
+# after execute, run
+# twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
 
 def getVersion() -> str:
     assert os.path.isfile(f'version.py')
