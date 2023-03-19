@@ -1,1 +1,5 @@
 mandrake
+serial
+minimalmodbus
+pymodbus
+

@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.4] - 20230-03-18
+## [0.0.5] - 2023-03-18
+
+**Authors**: Helbert Braga Fernandes
+
+### Added
+
+- Fix requirement.txt👶
+
+## [0.0.4] - 2023-03-18
 
 **Authors**: Helbert Braga Fernandes
 
