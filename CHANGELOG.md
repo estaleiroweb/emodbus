@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4] - 20230-03-18
+
+**Authors**: Helbert Braga Fernandes
+
+### Added
+
+- created static defSlave to encapsulate default MIB👶
+
 ## [0.0.3] - 2023-03-18
 
 **Authors**: Helbert Braga Fernandes

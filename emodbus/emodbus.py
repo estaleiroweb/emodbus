@@ -7,11 +7,11 @@ from . import modbustypes as mbt
 
 
 class Conn(ABC):
-    defSlave = {}
+    __defSlave = {}
 
     @abstractmethod
     def __init__(self, ) -> None:
-        self._slaves = {}
+        self.__slaves = {}
 
     def __call__(self):
         return self.__dict__
@@ -44,13 +44,20 @@ class Conn(ABC):
 
     def slave(self, slave: int, mib: dict = None) -> 'dict|None':
         if mib is None:
-            return Addr(self._slaves.get(slave, self.defSlave.get(slave)))
-        self._slaves[slave] = Addr(mib)
+            return Addr(self.__slaves.get(slave, Conn.__defSlave.get(slave)))
+        self.__slaves[slave] = Addr(mib)
 
-    def _addrRead(self, address: list, mib: dict) -> list:
+    def defSlave(slave: int, mib: dict = None) -> 'dict|None':
+        if mib is None:
+            return Addr(Conn.__defSlave.get(slave))
+        Conn.__defSlave[slave] = Addr(mib)
+
+    def _readMib(self, slave: int, address: list) -> 'tuple[Addr,list,list]':
+        mib = self.slave(slave)
+        keys = mib().keys()
         if address is None or len(address) == 0:
-            return list(mib.value.keys())
-        return address
+            address = list(mib.value.keys())
+        return (mib, keys, address)
 
 
 class ConnTCP(Conn):
@@ -69,9 +76,7 @@ class ConnTCP(Conn):
         self.port = port
 
     def read(self, slave: int = 0, address: list = []) -> dict:
-        mib = self.slave(slave)
-        address = self._addrRead(address, mib)
-        d = mib().keys()
+        mib, keys, address = self._readMib(slave, address)
 
         cli = ModbusTcpClient(self.host, self.port)
         dictFnCode = {
@@ -89,7 +94,7 @@ class ConnTCP(Conn):
 
         out = {}
         for name in address:
-            if name not in d:
+            if name not in keys:
                 continue
             o = InitModBusType(mib.value[name], name, slave)
             fn = dictFnCode[o.fnCode]
@@ -135,13 +140,10 @@ class ConnRTU(Conn):
         self._mode = minimalmodbus.MODE_RTU
 
     def read(self, slave: int = 0, address: list = []) -> dict:
-        out = {}
-        mib = self.slave(slave)
-        address = self._addrRead(address, mib)
-        d = mib().keys()
+        mib, keys, address = self._readMib(slave, address)
 
         cli = minimalmodbus.Instrument(
-            port=self.port, 
+            port=self.port,
             slaveaddress=0,
             mode=self._mode
         )
@@ -152,8 +154,9 @@ class ConnRTU(Conn):
         cli.serial.timeout = self.timeout
         cli.clear_buffers_before_each_transaction = True
 
+        out = {}
         for name in address:
-            if name not in d:
+            if name not in keys:
                 continue
             o = InitModBusType(mib.value[name], name, slave)
             cli.address = slave
