@@ -6,6 +6,7 @@ from setuptools import setup, find_packages
 
 # after execute, run
 # twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+# pip install emodbus --upgrade
 
 def getVersion() -> str:
     assert os.path.isfile(f'version.py')
