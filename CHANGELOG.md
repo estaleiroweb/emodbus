@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.6] - 2023-03-
+
+**Authors**: Helbert Braga Fernandes
+
+### Added
+
+- Fix statical methods👶
+- Fix `__str__` adding format and callback function
+- Add function `getSerials()`
 ## [0.0.5] - 2023-03-18
 
 **Authors**: Helbert Braga Fernandes

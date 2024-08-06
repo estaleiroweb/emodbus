@@ -1,3 +1,5 @@
+"""Constants used in Easy Modbus Project
+"""
 BYTE_ORDER = {
     '@': {'byte order': 'native', 'size': 'native', 'alignment': 'native', },
     '=': {'byte order': 'native', 'size': 'standard', 'alignment': 'none', },
@@ -6,19 +8,19 @@ BYTE_ORDER = {
     '!': {'byte order': 'network (=big-endian)', 'size': 'standard', 'alignment': 'none', },
 }
 '''
-### Link
+    ### Link
 
-https://docs.python.org/3/library/struct.html
+    https://docs.python.org/3/library/struct.html
 
-### Table
+    ### Table
 
-| Character | Byte order             | Size     | Alignment
-|:----------|:-----------------------|:---------|:------------
-| @         | native                 | native   | native
-| =         | native                 | standard | none
-| <         | little-endian          | standard | none
-| >         | big-endian             | standard | none
-| !         | network (= big-endian) | standard | none
+    | Character | Byte order             | Size     | Alignment
+    |:----------|:-----------------------|:---------|:------------
+    | @         | native                 | native   | native
+    | =         | native                 | standard | none
+    | <         | little-endian          | standard | none
+    | >         | big-endian             | standard | none
+    | !         | network (= big-endian) | standard | none
 '''
 
 class ByteOrder:
@@ -32,10 +34,6 @@ class Encode:
     ASCII = 'ascii'
     UTF8 = 'utf-8'
     
-ENCODE_ASCII = 'ascii'
-ENCODE_UTF8 = 'utf-8'
-
-
 CHAR_FORMAT = {
     'x': {'cType': 'pad byte', 'pyType': 'no value', 'size': None, },
     'c': {'cType': 'char', 'pyType': 'str', 'size': 1, },

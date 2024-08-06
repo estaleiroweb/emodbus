@@ -5,6 +5,16 @@ from inspect import currentframe, getframeinfo
 from mandrake import AllMethods
 from .constants import *
 
+"""TO DO
+Year by Char/Int "YYYY"
+Date by Char/Int "YYYY-MM-DD"
+Time by Char/Int "HH:MI:SS -0300"
+Datetime by Char/Int Date+Time
+Enum List by Int
+Set List by Bits
+Bool 0=False, !0=True
+"""
+
 
 class ModbusTypeInteface(AllMethods):
     defaultByteOrder = ByteOrder.BIG_ENDIAN
@@ -23,7 +33,7 @@ class ModbusTypeInteface(AllMethods):
         self._structFormat = ''
         self._charFormat = args.get('_charFormat', 's')
 
-        self.encoding = args.get('encoding', ENCODE_ASCII)
+        self.encoding = args.get('encoding', Encode.UTF8)
         self.byteOrder = args.get('byteOrder', self.defaultByteOrder)
         self.value = args.get('value', 0)
         self.raw = args.get('raw', None)
@@ -360,3 +370,47 @@ class Char64(Str):
         '_range': [64, 64],
         'bytes': 64,
     } | args)
+
+
+class TinyInt(Int):
+    ...
+
+
+class MediumInt(Int):
+    ...
+
+
+class BigInt(Int):
+    ...
+
+
+class Int1(Byte):
+    ...
+
+
+class Int2(Short):
+    ...
+
+
+class Int4(Int):
+    ...
+
+
+class Int8(LongLong):
+    ...
+
+
+class UInt1(UByte):
+    ...
+
+
+class UInt2(UShort):
+    ...
+
+
+class UInt4(UInt):
+    ...
+
+
+class UInt8(ULongLong):
+    ...

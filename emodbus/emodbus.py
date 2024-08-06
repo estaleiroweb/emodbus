@@ -1,9 +1,40 @@
 from abc import ABC, abstractmethod
 import serial
+import serial.tools.list_ports as ls
 import minimalmodbus
 from pymodbus.client import ModbusTcpClient
 from pymodbus.constants import Defaults
 from . import modbustypes as mbt
+
+
+def getSerials(all: bool = False) -> list[dict]:
+    """Get all or only ative (all=False) Serials of the computer
+
+    Args:
+        all (bool, optional): If True collect all Serials, if False collect only with PID. Defaults to False.
+
+    Returns:
+        list[dict]: List of Serials. Each item has a dictionary with data of serial (name, device, description, hwid, location, manufacturer, pid, serial_number, vid, usb_info)
+    """
+    return [
+        {
+            'name': p.name,
+            'device': p.device,
+            'description': p.description,
+            'hwid': p.hwid,
+            'location': p.location,
+            'manufacturer': p.manufacturer,
+            'pid': p.pid,
+            'serial_number': p.serial_number,
+            'vid': p.vid,
+            'usb_info': p.usb_info(),
+            # 'product': p.product,
+            # 'usb_description': p.usb_description(),
+            # 'interface': p.interface,
+        }
+        for p in ls.comports()
+        if all or p.pid is not None
+    ]
 
 
 class Conn(ABC):
@@ -18,46 +49,43 @@ class Conn(ABC):
 
     @abstractmethod
     def read(self, slave: int = 0, address: list = []) -> dict:
-        """Read by connection the values of modbus
+        """Read all address contented in MIB or only addresse that match address list
 
         Args:
-            slave (int, optional): Number of slave that it wants collect data. Defaults to 0.
-            address (list, optional): List of keys of mib address to collect only keys. Defaults to [] that collect all MIB.
+            slave (int, optional): Number of slave that it wants read data. Defaults to 0.
+            address (list, optional): A list of address contented in MIB that it wants read only. Defaults to [] that read all MIB-addr object values.
 
         Returns:
-            dict: return a relation key=>value of all asked
+            dict: Every results asked 'key:value' where value is a object ModbusTypeInteface ex: Int, Short, Dec
         """
         ...
 
     @abstractmethod
-    def write(self, slave: int = 0, address: dict = {}) -> dict:
+    def write(self, slave: int = 0, address: dict = {}) -> None:
         """Write by connection the values of modbus
 
         Args:
-            slave (int, optional): Number of slave that it wants collect data. Defaults to 0.
-            address (dict, optional): Dictionary of key=>value of mib address to collect only keys. Defaults to {} that write all MIB object values.
-
-        Returns:
-            dict: return a relation key=>value of all asked
+            slave (int, optional): Number of the slave that it wants write data. Defaults to 0.
+            address (dict, optional): Dictionary (key:value) of address contented in MIB that it wants write. Defaults to {} that write all MIB-addr object values.
         """
         ...
 
-    def slave(self, slave: int, mib: dict = {}) -> 'Addr':
+    def slave(self, slave: int, mib: dict = {}) -> 'Mib':
         if mib is None or len(mib) == 0:
-            return Addr(self.__slaves.get(slave, Conn.__defSlave.get(slave)))
-        self.__slaves[slave] = Addr(mib)
+            return Mib(self.__slaves.get(slave, Conn.__defSlave.get(slave)))
+        self.__slaves[slave] = Mib(mib)
         return self.__slaves[slave]
 
     @staticmethod
-    def defSlave(slave: int, mib: dict = {}) -> 'Addr':
+    def defSlave(slave: int, mib: dict = {}) -> 'Mib':
         if mib is None or len(mib) == 0:
             if slave in Conn.__defSlave.keys():
                 return Conn.__defSlave[slave]
-            return Addr()
-        Conn.__defSlave[slave] = Addr(mib)
+            return Mib()
+        Conn.__defSlave[slave] = Mib(mib)
         return Conn.__defSlave[slave]
 
-    def _readMib(self, slave: int, address: list) -> 'tuple[Addr,list,list]':
+    def _readMib(self, slave: int, address: list) -> 'tuple[Mib,list,list]':
         mib = self.slave(slave)
         keys = list(mib().keys())
         if address is None or len(address) == 0:
@@ -66,16 +94,13 @@ class Conn(ABC):
 
 
 class ConnTCP(Conn):
-    """Collect a list of modbus address in TCP/IP Address
-
-        ### Args:
-            dictAddress (dict of tuple(address:int,address:int), optional): _description_. Example {'Addr': (address, address, slave)}.
-            host (str, optional): _description_.
-        ### Returns:
-            dict of str: List of values related with addrs argument
-    """
-
     def __init__(self, host: str, port: int = Defaults.TcpPort) -> None:
+        """Collect a list of modbus address in TCP/IP Address
+
+        Args:
+            host (str): Ip or hostname to connect in Modbus bus
+            port (int, optional): Port of Ip if diferent of default. Defaults to Defaults.TcpPort.
+        """
         super().__init__()
         self.host = host
         self.port = port
@@ -116,28 +141,22 @@ class ConnTCP(Conn):
 
         return out
 
-    def write(self, slave: int = 0, address: dict = {}) -> dict:
+    def write(self, slave: int = 0, address: dict = {}) -> None:
         mib = self.slave(slave)
-        return {}
 
 
 class ConnRTU(Conn):
-    """Collect a list of modbus address in serial and slave node
-
-        Args:
-            dictAddress (dict of tuple(address:int,address:int), optional): _description_. Example {'Addr': (address, address, slave)}.
-            port (str, optional): _description_. Defaults to 'COM1'.
-            slave (int, optional): _description_. Defaults to 1.
-            baudrate (int, optional): _description_. Defaults to 9600.
-            bytesize (int, optional): _description_. Defaults to 8.
-            parity (_type_, optional): _description_. Defaults to serial.PARITY_NONE.
-            stopbits (int, optional): _description_. Defaults to 1.
-            timeout (float, optional): _description_. Defaults to 0.1.
-        Returns:
-            dict of str: List of values related with addrs argument
-     """
-
     def __init__(self, port: str = 'COM1', baudrate: int = 9600, bytesize: int = 8, parity: str = serial.PARITY_NONE, stopbits: int = 1, timeout: float = 0.1) -> None:
+        """Collect a list of modbus address in serial RTU
+
+            Args:
+                port (str, optional): Serial port of connection. Use getSerials() to known with to use. Defaults to 'COM1'.
+                baudrate (int, optional): Defaults to 9600.
+                bytesize (int, optional): Defaults to 8.
+                parity (_type_, optional): Defaults to serial.PARITY_NONE.
+                stopbits (int, optional): Defaults to 1.
+                timeout (float, optional): Defaults to 0.1.
+        """
         super().__init__()
         self.port = port
         self.baudrate = baudrate
@@ -186,14 +205,24 @@ class ConnRTU(Conn):
 
 class ConnASCII(ConnRTU):
     def __init__(self, port: str = 'COM1', baudrate: int = 9600, bytesize: int = 8, parity: str = serial.PARITY_NONE, stopbits: int = 1, timeout: float = 0.1) -> None:
+        """Collect a list of modbus address in serial ASCII
+
+            Args:
+                port (str, optional): Serial port of connection. Use getSerials() to known with to use. Defaults to 'COM1'.
+                baudrate (int, optional): Defaults to 9600.
+                bytesize (int, optional): Defaults to 8.
+                parity (_type_, optional): Defaults to serial.PARITY_NONE.
+                stopbits (int, optional): Defaults to 1.
+                timeout (float, optional): Defaults to 0.1.
+        """
         super().__init__(port, baudrate, bytesize, parity, stopbits, timeout)
         self._mode = minimalmodbus.MODE_ASCII
 
 
-class Addr:
-    def __init__(self, value: 'Addr|dict' = {}) -> None:
+class Mib:
+    def __init__(self, value: 'Mib|dict' = {}) -> None:
         self._count = 0
-        if isinstance(value, Addr):
+        if isinstance(value, Mib):
             self.value = value.value
         else:
             self.value = {}
